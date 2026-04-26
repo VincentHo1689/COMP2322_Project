@@ -1,19 +1,27 @@
-# Multi-Threaded HTTP Web Server
+# COMP2322 Project: Multi-Threaded HTTP Web Server
 
-COMP2322 Project
-Student Name: Ho Kwun Chung
-Student ID: 22074679d
+---
+
+## Student Name: Ho Kwun Chung
+
+## Student ID: 22074679d
+
+---
 
 ## 1. Reproduce
 
 ### Step 1: Clone the repo
 
-git clone <https://github.com/VincentHo1689/COMP2322_Project.git>
+```bash
+git clone https://github.com/VincentHo1689/COMP2322_Project.git
 cd Code
+```
 
 ### Step 2: Start server
 
+```bash
 python3 server_main.py
+```
 
 ---
 
@@ -32,6 +40,7 @@ The server is built using 6 Python files:
 
 ## 3. Project Hierarchy
 
+```bash
 Code/
 ├── server_main.py
 ├── thread_manager.py
@@ -46,6 +55,7 @@ Code/
 ├── sample.txt
 ├── 403.txt
 └── images/
+```
 
 ---
 
