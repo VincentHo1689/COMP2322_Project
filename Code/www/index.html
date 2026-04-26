@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Multi-threaded web server</title>
+	</head>
+	<body>
+		<h1>Multi-threaded web server</h1>
+		<p>Name: Ho Kwun Chung</p>
+		<p>Student ID: 22074679D</p>
+
+		<div>
+			<label for="pathInput">Path:</label>
+			<input id="pathInput" type="text" value="/sample.txt" placeholder="/sample.txt" />
+			<button type="button" onclick="sendRequest('GET')">GET</button>
+			<button type="button" onclick="sendRequest('HEAD')">HEAD</button>
+			<button type="button" onclick="openPath()">Open URL</button>
+		</div>
+
+		<p>Try: /sample.txt, /images/test1.jpg, /404.txt, /403.txt</p>
+
+		<h2>Response</h2>
+		<pre id="responseBox">No request yet.</pre>
+		<div id="imagePreview"></div>
+
+		<script>
+			const DEFAULT_SERVER_ORIGIN = "http://127.0.0.1:8080"
+
+			function serverOrigin() {
+				if (window.location.origin && window.location.origin.startsWith("http")) {
+					return window.location.origin
+				}
+				return DEFAULT_SERVER_ORIGIN
+			}
+
+			function nowText() {
+				const now = new Date()
+				const yyyy = now.getFullYear()
+				const mm = String(now.getMonth() + 1).padStart(2, "0")
+				const dd = String(now.getDate()).padStart(2, "0")
+				const hh = String(now.getHours()).padStart(2, "0")
+				const mi = String(now.getMinutes()).padStart(2, "0")
+				const ss = String(now.getSeconds()).padStart(2, "0")
+				return yyyy + "-" + mm + "-" + dd + " " + hh + ":" + mi + ":" + ss
+			}
+
+			function normalizePath(inputText) {
+				const trimmed = inputText.trim()
+				if (trimmed === "") {
+					return "/"
+				}
+				if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+					return trimmed
+				}
+				if (!trimmed.startsWith("/")) {
+					return "/" + trimmed
+				}
+				return trimmed
+			}
+
+			function openPath() {
+				const raw = document.getElementById("pathInput").value
+				const target = normalizePath(raw)
+				if (target.startsWith("http://") || target.startsWith("https://")) {
+					window.open(target, "_blank")
+					return
+				}
+				window.open(serverOrigin() + target, "_blank")
+			}
+
+			function makeLogStyleLine(method, target, statusCode, statusText, persistentText) {
+				return (
+					"EVENT=REQUEST_UI" +
+					"\ttime=" +
+					nowText() +
+					"\tmethod=" +
+					method +
+					"\ttarget=" +
+					target +
+					"\tstatus_code=" +
+					statusCode +
+					"\tstatus_text=" +
+					statusText +
+					"\tpersistent=" +
+					persistentText
+				)
+			}
+
+			async function sendRequest(method) {
+				const responseBox = document.getElementById("responseBox")
+				const imagePreview = document.getElementById("imagePreview")
+				imagePreview.innerHTML = ""
+
+				const raw = document.getElementById("pathInput").value
+				const target = normalizePath(raw)
+				const requestUrl = target.startsWith("http://") || target.startsWith("https://") ? target : serverOrigin() + target
+
+				responseBox.textContent = "Loading..."
+
+				try {
+					const response = await fetch(requestUrl, {
+						method: method,
+						cache: "no-store"
+					})
+
+					const exposedHeaders = []
+					response.headers.forEach(function (value, key) {
+						exposedHeaders.push(key + ": " + value)
+					})
+
+					let bodySection = ""
+					const contentType = (response.headers.get("content-type") || "").toLowerCase()
+
+					if (method === "GET") {
+						if (contentType.startsWith("image/")) {
+							const blobData = await response.blob()
+							bodySection = "Body: <binary image " + blobData.size + " bytes>"
+							const objectUrl = URL.createObjectURL(blobData)
+							imagePreview.innerHTML = '<strong>Image Preview:</strong><br><img src="' + objectUrl + '" alt="image preview">'
+						} else {
+							const textData = await response.text()
+							bodySection = "Body:\n" + textData
+						}
+					} else {
+						bodySection = "Body: (empty for HEAD request)"
+					}
+
+					let persistentText = response.headers.get("connection")
+					if (!persistentText) {
+						persistentText = "unknown (Connection header not exposed by browser)"
+					}
+
+					const logStyleLine = makeLogStyleLine(method, target, response.status, response.statusText, persistentText)
+
+					const outputLines = [
+						"Request-Line: " + method + " " + target + " HTTP/1.1",
+						"Request-URL: " + requestUrl,
+						"Status-Line: HTTP/1.1 " + response.status + " " + response.statusText,
+						"",
+						"Headers:",
+						exposedHeaders.length > 0 ? exposedHeaders.join("\n") : "(no headers exposed)",
+						"",
+						"Log-Style Line:",
+						logStyleLine,
+						"",
+						bodySection
+					]
+
+					responseBox.textContent = outputLines.join("\n")
+				} catch (error) {
+					responseBox.textContent =
+						"Request failed: " + error + "\n\nCheck:\n1) server_main.py is running\n2) URL is correct\n3) if this page was opened as file://, requests are sent to " + serverOrigin()
+				}
+			}
+		</script>
+	</body>
+</html>
